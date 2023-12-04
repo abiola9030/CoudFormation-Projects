@@ -1,0 +1,409 @@
+AWSTemplateFormatVersion: 2010-09-09
+Description: "EY Project VPC Networking Template"
+
+Parameters: 
+  ApplicationName:
+    Description: "App Name"
+    Type: String
+    Default: "EY"
+
+  Environment:
+    Description: "Application Environment"
+    Type: String
+    Default: "Dev"
+    AllowedValues: ["Dev", "Test", "Prod", "Stage"]
+
+  VPCCIDRBlock: 
+    Description: "CIDR range for the VPC"
+    Type: String
+    Default: "10.0.0.0/16"
+
+  PublicSubnet1CIDRBlock: 
+    Description: "CIDR range for the Public Subnet 1"
+    Type: String
+    Default: "10.0.1.0/24"
+
+  PublicSubnet2CIDRBlock: 
+    Description: "CIDR range for the Public Subnet 2"
+    Type: String
+    Default: "10.0.2.0/24"
+
+  PrivateSubnet1CIDRBlock: 
+    Description: "CIDR range for the Private Subnet 1"
+    Type: String
+    Default: "10.0.3.0/24"
+
+  PrivateSubnet2CIDRBlock: 
+    Description: "CIDR range for the Private Subnet 2"
+    Type: String
+    Default: "10.0.4.0/24"
+
+
+  Contact:
+    Description: "Contact email of the template"
+    Type: String
+
+
+Resources: 
+  myVPC:
+    Type: AWS::EC2::VPC
+    Properties:
+      CidrBlock: !Ref VPCCIDRBlock
+      EnableDnsSupport: 'true'
+      EnableDnsHostnames: 'true'
+      Tags:
+        - Key: Name
+          Value: !Join [ "-", [ !Ref ApplicationName, !Ref Environment, vpc ] ]
+        - Key: App
+          Value: !Ref ApplicationName
+        - Key: Env
+          Value: !Ref Environment
+        - Key: Contact
+          Value: !Ref Contact
+
+  PublicSubnet1:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId:
+        Ref: myVPC
+      CidrBlock: !Ref PublicSubnet1CIDRBlock
+      AvailabilityZone: !Select [0, !GetAZs ""]
+      MapPublicIpOnLaunch: true
+      Tags:
+        - Key: Name
+          Value: !Join [ "-", [ !Ref ApplicationName, !Ref Environment, public-subnet-1 ] ]
+        - Key: App
+          Value: !Ref ApplicationName
+        - Key: Env
+          Value: !Ref Environment
+        - Key: Contact
+          Value: !Ref Contact
+
+  PublicSubnet2:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId:
+        Ref: myVPC
+      CidrBlock: !Ref PublicSubnet2CIDRBlock
+      AvailabilityZone: !Select [1, !GetAZs ""]
+      MapPublicIpOnLaunch: true
+      Tags:
+        - Key: Name
+          Value: !Join [ "-", [ !Ref ApplicationName, !Ref Environment, public-subnet-2 ] ]
+        - Key: App
+          Value: !Ref ApplicationName
+        - Key: Env
+          Value: !Ref Environment
+        - Key: Contact
+          Value: !Ref Contact
+
+  PrivateSubnet1:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId:
+        Ref: myVPC
+      CidrBlock: !Ref PrivateSubnet1CIDRBlock
+      AvailabilityZone: !Select [0, !GetAZs ""]
+      MapPublicIpOnLaunch: false
+      Tags:
+        - Key: Name
+          Value: !Join [ "-", [ !Ref ApplicationName, !Ref Environment, private-subnet-1 ] ]
+        - Key: App
+          Value: !Ref ApplicationName
+        - Key: Env
+          Value: !Ref Environment
+        - Key: Contact
+          Value: !Ref Contact
+
+  PrivateSubnet2:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId:
+        Ref: myVPC
+      CidrBlock: !Ref PrivateSubnet2CIDRBlock
+      AvailabilityZone: !Select [1, !GetAZs ""]
+      MapPublicIpOnLaunch: false
+      Tags:
+        - Key: Name
+          Value: !Join [ "-", [ !Ref ApplicationName, !Ref Environment, private-subnet-2 ] ]
+        - Key: App
+          Value: !Ref ApplicationName
+        - Key: Env
+          Value: !Ref Environment
+        - Key: Contact
+          Value: !Ref Contact
+
+  InternetGateway:
+    Type: AWS::EC2::InternetGateway
+    Properties:
+      Tags:
+        - Key: Name
+          Value: !Join [ "-", [ !Ref ApplicationName, !Ref Environment, IGW ] ]
+        - Key: App
+          Value: !Ref ApplicationName
+        - Key: Env
+          Value: !Ref Environment
+        - Key: Contact
+          Value: !Ref Contact
+  AttachGateway:
+    Type: AWS::EC2::VPCGatewayAttachment
+    Properties:
+      VpcId:
+        Ref: myVPC
+      InternetGatewayId:
+        Ref: InternetGateway
+
+  RouteTablePublic:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId:  
+        Ref: myVPC
+      Tags:
+        - Key: Name
+          Value: !Join [ "-", [ !Ref ApplicationName, !Ref Environment, "Route-Table-Public"] ]
+        - Key: App
+          Value: !Ref ApplicationName
+        - Key: Env
+          Value: !Ref Environment
+        - Key: Contact
+          Value: !Ref Contact
+
+  RouteTablePrivate:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId:  
+        Ref: myVPC
+      Tags:
+        - Key: Name
+          Value: !Join [ "-", [ !Ref ApplicationName, !Ref Environment, "Route-Table-Private"] ]
+        - Key: App
+          Value: !Ref ApplicationName
+        - Key: Env
+          Value: !Ref Environment
+        - Key: Contact
+          Value: !Ref Contact
+        
+  PublicSubnet1RouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId:
+        Ref: PublicSubnet1
+      RouteTableId:
+        Ref: RouteTablePublic
+
+  PublicSubnet2RouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId:
+        Ref: PublicSubnet2
+      RouteTableId:
+        Ref: RouteTablePublic
+
+  PrivateSubnet1RouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId:
+        Ref: PrivateSubnet1
+      RouteTableId:
+        Ref: RouteTablePrivate
+
+  PrivateSubnet2RouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId:
+        Ref: PrivateSubnet2
+      RouteTableId:
+        Ref: RouteTablePrivate
+
+  PublicRoute:
+    Type: AWS::EC2::Route
+    DependsOn: InternetGateway
+    Properties:
+       RouteTableId:
+         Ref: RouteTablePublic
+       DestinationCidrBlock: 0.0.0.0/0
+       GatewayId:
+         Ref: InternetGateway
+
+
+  NATGatewayEIP:
+   Type: AWS::EC2::EIP
+   Properties:
+      Domain: vpc
+
+
+  NATGateway:
+   Type: AWS::EC2::NatGateway
+   Properties:
+      AllocationId: !GetAtt NATGatewayEIP.AllocationId
+      SubnetId: !Ref PublicSubnet1
+      Tags:
+        - Key: Name
+          Value: !Join [ "-", [ !Ref ApplicationName, !Ref Environment, "NGW"] ]
+        - Key: App
+          Value: !Ref ApplicationName
+        - Key: Env
+          Value: !Ref Environment
+        - Key: Contact
+          Value: !Ref Contact
+
+  RouteNATGateway:
+   DependsOn: NATGateway
+   Type: AWS::EC2::Route
+   Properties:
+      RouteTableId: !Ref RouteTablePrivate
+      DestinationCidrBlock: '0.0.0.0/0'
+      NatGatewayId: !Ref NATGateway
+
+
+  ELBSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupName: !Sub ${ApplicationName}-${Environment}-elb-sg
+      GroupDescription: ELB Security Group
+      VpcId: !Ref myVPC
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 80
+          ToPort: 80
+          CidrIp: 0.0.0.0/0
+        - IpProtocol: tcp
+          FromPort: 443
+          ToPort: 443
+          CidrIp: 0.0.0.0/0
+      Tags:
+        - Key: Name
+          Value: !Sub ${ApplicationName}-${Environment}-elb-sg
+        - Key: App
+          Value: !Ref ApplicationName
+        - Key: Env
+          Value: !Ref Environment
+        - Key: Contact
+          Value: !Ref Contact
+
+
+  WebSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupName: !Sub ${ApplicationName}-${Environment}-web-sg
+      GroupDescription: Web Security Group
+      VpcId: !Ref myVPC
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 80
+          ToPort: 80
+          SourceSecurityGroupId: !GetAtt ELBSecurityGroup.GroupId
+        - IpProtocol: tcp
+          FromPort: 443
+          ToPort: 443
+          SourceSecurityGroupId: !GetAtt ELBSecurityGroup.GroupId
+      Tags:
+        - Key: Name
+          Value: !Sub ${ApplicationName}-${Environment}-web-sg
+        - Key: App
+          Value: !Ref ApplicationName
+        - Key: Env
+          Value: !Ref Environment
+        - Key: Contact
+          Value: !Ref Contact
+
+
+  AppSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupName: !Sub ${ApplicationName}-${Environment}-app-sg
+      GroupDescription: App Security Group
+      VpcId: !Ref myVPC
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 5000
+          ToPort: 5000
+          SourceSecurityGroupId: !GetAtt WebSecurityGroup.GroupId
+      Tags:
+        - Key: Name
+          Value: !Sub ${ApplicationName}-${Environment}-app-sg
+        - Key: App
+          Value: !Ref ApplicationName
+        - Key: Env
+          Value: !Ref Environment
+        - Key: Contact
+          Value: !Ref Contact
+
+
+  DBSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupName: !Sub ${ApplicationName}-${Environment}-db-sg
+      GroupDescription: DB Security Group
+      VpcId: !Ref myVPC
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 3306
+          ToPort: 3306
+          SourceSecurityGroupId: !GetAtt AppSecurityGroup.GroupId
+      Tags:
+        - Key: Name
+          Value: !Sub ${ApplicationName}-${Environment}-db-sg
+        - Key: App
+          Value: !Ref ApplicationName
+        - Key: Env
+          Value: !Ref Environment
+        - Key: Contact
+          Value: !Ref Contact
+
+
+
+Outputs:
+  VpcID:
+    Description: "To get VPC id"
+    Value: !Ref myVPC
+    Export:
+      Name: !Sub "${ApplicationName}-${Environment}-VpcID"
+
+  PublicSubnet1ID:
+    Description: "To get public subnet 1 id"
+    Value: !Ref PublicSubnet1
+    Export:
+      Name: !Sub "${ApplicationName}-${Environment}-PublicSubnet1ID"
+
+  PublicSubnet2ID:
+    Description: "To get public subnet 2 id"
+    Value: !Ref PublicSubnet2
+    Export:
+      Name: !Sub "${ApplicationName}-${Environment}-PublicSubnet2ID"
+
+  PrivateSubnet1ID:
+    Description: "To get private subnet 1 id"
+    Value: !Ref PrivateSubnet1
+    Export:
+      Name: !Sub "${ApplicationName}-${Environment}-PrivateSubnet1ID"
+
+  PrivateSubnet2ID:
+    Description: "To get private subnet 2 id"
+    Value: !Ref PrivateSubnet2
+    Export:
+      Name: !Sub "${ApplicationName}-${Environment}-PrivateSubnet2ID"
+
+  ELBSecurityGroupID:
+    Description: "ELB Security Group ID"
+    Value: !GetAtt ELBSecurityGroup.GroupId
+    Export:
+      Name: !Sub "${ApplicationName}-${Environment}-ELBSecurityGroupID"
+
+  WebSecurityGroupID:
+    Description: "Web Security Group ID"
+    Value: !GetAtt WebSecurityGroup.GroupId
+    Export:
+      Name: !Sub "${ApplicationName}-${Environment}-WebSecurityGroupID"
+
+  AppSecurityGroupID:
+    Description: "App Security Group ID"
+    Value: !GetAtt AppSecurityGroup.GroupId
+    Export:
+      Name: !Sub "${ApplicationName}-${Environment}-AppSecurityGroupID"
+
+  DBSecurityGroupID:
+    Description: "DB Security Group ID"
+    Value: !GetAtt DBSecurityGroup.GroupId
+    Export:
+      Name: !Sub "${ApplicationName}-${Environment}-DBSecurityGroupID"

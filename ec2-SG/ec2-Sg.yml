@@ -1,0 +1,81 @@
+AWSTemplateFormatVersion: 2010-09-09
+Description: "Netflix app resources template creating EC2 & SG"
+
+Parameters:
+  EC2Key:
+    Type: String
+    Default: "abiola-nova-kp"
+  ImageId:
+    Type: String
+    Default: "ami-04cb4ca688797756f"
+  InstanceType:
+    Type: String
+    Default: "t2.micro"
+    AllowedValues:
+      - "t2.nano"
+      - "t2.micro"
+      - "t2.small"
+
+Resources: 
+  myEC2Instance:
+    Type: AWS::EC2::Instance
+    Properties:
+      KeyName: !Ref EC2Key
+      ImageId: !Ref ImageId
+      InstanceType: !Ref InstanceType
+      SecurityGroupIds:
+        - !Ref secGroupName
+      UserData: !Base64 |
+        #!/bin/bash -ex
+        # Update the system
+        sudo yum update -y
+
+        # Install Apache HTTP Server (httpd)
+        sudo yum install httpd -y
+
+        # Install Git
+        sudo yum install git -y
+
+
+        # Clone the repository
+        git clone https://github.com/cvamsikrishna11/ecommerce-web-app.git
+
+        # Copy the files inside the cloned folder to the desired location
+        sudo cp -r ecommerce-web-app/server2/* /var/www/html/
+
+        # To get the current hostname address
+        echo "<center><p>Running the website from instance host: $(hostname -f)</p></center>" >> /var/www/html/index.html
+
+
+        # Start and enable the HTTP server
+        sudo systemctl start httpd
+        sudo systemctl enable httpd
+      Tags:
+        - Key: "Name"
+          Value: "Web-server"
+        - Key: "Team"
+          Value: "Team Victorious"
+
+  secGroupName:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupName: "netflix-web-server-sg"
+      GroupDescription: "to allow http traffic"
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 80
+          ToPort: 80
+          CidrIp: 0.0.0.0/0
+        - IpProtocol: tcp
+          FromPort: 443
+          ToPort: 443
+          CidrIp: 0.0.0.0/0
+      SecurityGroupEgress:
+        - IpProtocol: tcp
+          FromPort: 1
+          ToPort: 65535
+          CidrIp: 0.0.0.0/0
+      Tags:
+        - Key: "Team"
+          Value: "Victorious"
+      VpcId: "vpc-0a3d6cb996a0e599b"
